@@ -1,0 +1,68 @@
+import type { Book } from "@/types/book"
+
+export const mockBooks: Book[] = [
+  {
+    id: "book-1",
+    title: "Introduction to Algorithms",
+    author: "Thomas H. Cormen",
+    isbn: "9780262046305",
+    college: "IIT Madras",
+    availability: "available",
+  },
+  {
+    id: "book-2",
+    title: "Computer Networks",
+    author: "Andrew S. Tanenbaum",
+    isbn: "9780132126953",
+    college: "NIT Trichy",
+    availability: "issued",
+  },
+  {
+    id: "book-3",
+    title: "Database System Concepts",
+    author: "Abraham Silberschatz",
+    isbn: "9781260084504",
+    college: "IIIT Hyderabad",
+    availability: "digital",
+  },
+  {
+    id: "book-4",
+    title: "Operating System Concepts",
+    author: "Abraham Silberschatz",
+    isbn: "9781119800361",
+    college: "IIT Bombay",
+    availability: "available",
+  },
+  {
+    id: "book-5",
+    title: "The Pragmatic Programmer",
+    author: "Andrew Hunt",
+    isbn: "9780135957059",
+    college: "VIT Vellore",
+    availability: "digital",
+  },
+  {
+    id: "book-6",
+    title: "Clean Code",
+    author: "Robert C. Martin",
+    isbn: "9780132350884",
+    college: "NIT Warangal",
+    availability: "issued",
+  },
+  {
+    id: "book-7",
+    title: "Designing Data-Intensive Applications",
+    author: "Martin Kleppmann",
+    isbn: "9781449373320",
+    college: "BITS Pilani",
+    availability: "available",
+  },
+  {
+    id: "book-8",
+    title: "Artificial Intelligence: A Modern Approach",
+    author: "Stuart Russell",
+    isbn: "9780134610993",
+    college: "IISc Bengaluru",
+    availability: "digital",
+  },
+]
