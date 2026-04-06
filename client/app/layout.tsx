@@ -7,8 +7,8 @@ import { TopNavbar } from "@/components/top-navbar"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "LibrisConnect",
-  description: "Multi-tenant library resource sharing platform",
+  title: "LibrisConnect - Shared Library Access",
+  description: "Multi-tenant library resource sharing platform for connected universities",
 }
 
 export default function RootLayout({
@@ -22,9 +22,9 @@ export default function RootLayout({
         <SessionProvider>
           <SearchProvider>
             <ActivityProvider>
-              <div className="min-h-screen">
+              <div className="min-h-screen flex flex-col">
                 <TopNavbar />
-                <main>{children}</main>
+                <main className="flex-1">{children}</main>
               </div>
             </ActivityProvider>
           </SearchProvider>

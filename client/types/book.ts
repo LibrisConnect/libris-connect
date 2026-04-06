@@ -6,6 +6,8 @@ export interface Book {
   author: string
   isbn: string
   college: string
+  category?: string
+  rating?: number
   availability: AvailabilityStatus
 }
 
