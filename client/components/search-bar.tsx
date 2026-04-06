@@ -21,18 +21,20 @@ export function SearchBar({ value, onValueChange, onSearch }: SearchBarProps) {
   }, [debouncedQuery, onSearch])
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full group">
       <label htmlFor="search-books" className="sr-only">
         Search books
       </label>
-      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+      <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+        <Search className="h-5 w-5 text-primary/50 transition-colors group-focus-within:text-primary" />
+      </div>
       <Input
         id="search-books"
         aria-label="Search books"
         value={query}
         onChange={(event) => onValueChange(event.target.value)}
-        placeholder="Search books, authors, ISBN..."
-        className="h-10 pl-9"
+        placeholder="Search books, authors, or ISBN..."
+        className="h-12 pl-12 pr-4 border-border/50 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-base"
       />
     </div>
   )

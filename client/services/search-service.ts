@@ -1,3 +1,4 @@
+import { apiClient } from "@/lib/api-client"
 import { getBooks } from "@/services/books"
 import type { Book, SearchFilters } from "@/types/book"
 import type {
@@ -7,32 +8,60 @@ import type {
 
 const normalize = (value: string) => value.trim().toLowerCase()
 
-export function searchBooks(query: string, filters?: SearchFilters): Book[] {
-  const normalizedQuery = normalize(query)
-  const books = getBooks()
+/**
+ * Search books with filters - tries API first, falls back to local
+ */
+export async function searchBooks(query: string, filters?: SearchFilters): Promise<Book[]> {
+  try {
+    const normalizedQuery = normalize(query)
+    const response = await apiClient.getBooks(
+      normalizedQuery || undefined,
+      undefined
+    )
 
-  return books.filter((book) => {
-    const matchesQuery =
-      normalizedQuery.length === 0 ||
-      normalize(book.title).includes(normalizedQuery) ||
-      normalize(book.author).includes(normalizedQuery) ||
-      normalize(book.isbn).includes(normalizedQuery)
+    let books = response.books || []
 
-    const matchesCollege = !filters?.college || book.college === filters.college
+    // Apply additional filtering on client side if needed
+    if (filters?.college) {
+      books = books.filter((book: any) => {
+        const collegeName = book.college?.name || book.college || ""
+        return collegeName.toLowerCase().includes(filters.college!.toLowerCase())
+      })
+    }
 
-    const matchesAvailability =
-      !filters?.availability ||
-      filters.availability === "all" ||
-      book.availability === filters.availability
+    // Filter by availability
+    if (filters?.availability && filters.availability !== 'all') {
+      books = books.filter((book: any) => book.availability === filters.availability)
+    }
 
-    return matchesQuery && matchesCollege && matchesAvailability
-  })
+    return books
+  } catch (error) {
+    console.warn("Failed to search via API, using local search:", error)
+    // Fallback to local search
+    const books = await getBooks()
+    const normalizedQuery = normalize(query)
+
+    return books.filter((book: any) => {
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        normalize(book.title).includes(normalizedQuery) ||
+        normalize(book.author).includes(normalizedQuery) ||
+        normalize(book.isbn).includes(normalizedQuery)
+
+      const matchesCollege = !filters?.college || 
+        (book.college?.name || book.college || "").toLowerCase().includes(filters.college.toLowerCase())
+
+      const matchesAvailability = !filters?.availability || filters.availability === 'all' || book.availability === filters.availability
+
+      return matchesQuery && matchesCollege && matchesAvailability
+    })
+  }
 }
 
-export function searchBooksByContract(
+export async function searchBooksByContract(
   query: GetBooksSearchQuery
-): GetBooksSearchResponse {
-  const items = searchBooks(query.q ?? "", {
+): Promise<GetBooksSearchResponse> {
+  const items = await searchBooks(query.q ?? "", {
     college: query.college ?? "",
     availability: query.availability ?? "all",
   })

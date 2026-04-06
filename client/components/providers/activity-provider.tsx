@@ -13,26 +13,28 @@ import {
 import type { Book } from "@/types/book"
 import type { LibraryRequest } from "@/types/request"
 
+export type RequestAccessResult = "created" | "duplicate"
+
 interface ActivityContextValue {
   recentlyViewedBooks: Book[]
   activeRequests: LibraryRequest[]
   addRecentlyViewedBook: (book: Book) => void
-  requestAccess: (book: Book) => void
+  requestAccess: (book: Book) => RequestAccessResult
 }
 
 const initialActiveRequests: LibraryRequest[] = [
   {
     id: "REQ-1024",
-    bookId: "book-11",
-    title: "Distributed Systems",
+    bookId: "book-8",
+    title: "Artificial Intelligence: A Modern Approach",
     targetCollege: "IISc Bengaluru",
     state: "pending_approval",
     createdAt: "2026-03-31T08:30:00.000Z",
   },
   {
     id: "REQ-1021",
-    bookId: "book-10",
-    title: "Modern Operating Systems",
+    bookId: "book-7",
+    title: "Designing Data-Intensive Applications",
     targetCollege: "BITS Pilani",
     state: "ready_for_pickup",
     createdAt: "2026-03-30T12:00:00.000Z",
@@ -51,23 +53,20 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
     setRecentlyViewedBooks((prev) => [book, ...prev.filter((item) => item.id !== book.id)].slice(0, 6))
   }, [])
 
-  const requestAccess = useCallback((book: Book) => {
-    setActiveRequests((prev) => {
-      const existing = prev.find(
-        (request) =>
-          request.title === book.title &&
-          request.targetCollege === book.college &&
-          request.state === "pending_approval"
+  const requestAccess = useCallback(
+    (book: Book): RequestAccessResult => {
+      const hasPendingRequest = activeRequests.some(
+        (request) => request.bookId === book.id && request.state === "pending_approval"
       )
 
-      if (existing) {
-        return prev
+      if (hasPendingRequest) {
+        return "duplicate"
       }
 
       const nextId = `REQ-${String(requestCounter.current).padStart(4, "0")}`
       requestCounter.current += 1
 
-      return [
+      setActiveRequests((prev) => [
         {
           id: nextId,
           bookId: book.id,
@@ -77,9 +76,12 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
         },
         ...prev,
-      ]
-    })
-  }, [])
+      ])
+
+      return "created"
+    },
+    [activeRequests]
+  )
 
   const value = useMemo<ActivityContextValue>(
     () => ({

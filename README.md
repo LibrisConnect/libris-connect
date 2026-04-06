@@ -4,15 +4,15 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Status-In%20Development-yellow?style=for-the-badge" />
   <img src="https://img.shields.io/badge/Version-1.0.0--DRAFT-blue?style=for-the-badge" />
-  <img src="https://img.shields.io/badge/Platform-Azure-0078D4?style=for-the-badge&logo=microsoftazure" />
-  <img src="https://img.shields.io/badge/Framework-Next.js%2015-black?style=for-the-badge&logo=nextdotjs" />
+  <img src="https://img.shields.io/badge/Database-MongoDB%20Atlas-13aa52?style=for-the-badge&logo=mongodb" />
+  <img src="https://img.shields.io/badge/Framework-Next.js%2016-black?style=for-the-badge&logo=nextdotjs" />
 </p>
 
 ---
 
 ## 🌐 Overview
 
-**LibrisConnect** is a scalable, cloud-native SaaS platform that enables educational institutions across India to operate as independent tenants while participating in a **Shared Knowledge Grid**. The platform bridges the resource gap between Tier-1 and Tier-2/3 colleges by enabling secure inter-institutional sharing of physical and digital academic resources.
+**LibrisConnect** is a scalable, cloud-native resource sharing platform that enables educational institutions across India to collaborate securely. The platform bridges the resource gap between Tier-1 and Tier-2/3 colleges by enabling inter-institutional sharing of academic resources.
 
 > *"A student in a village in Andhra Pradesh should have access to the same academic resources as a student at IIT Madras."*
 
@@ -22,290 +22,392 @@
 
 | Feature | Description |
 |---|---|
-| 🏛 **Multi-Tenancy** | Complete data isolation between colleges using Azure Cosmos DB partitioning |
-| 🔍 **Global Search** | Semantic and fuzzy search across the entire college network via Azure AI Search |
-| 📤 **Inter-Library Loans (ILL)** | Real-time request and approval workflow between institutions |
-| 🔐 **Secure Digital Access** | Time-limited SAS token links for PDF previews (24-hour expiry) |
-| 👥 **Role-Based Access Control** | Student, Librarian, and Super Admin roles via Microsoft Entra ID |
-| 📊 **Analytics Dashboard** | Demand heatmaps and audit logs for librarians and admins |
+| 🏛 **Multi-Tenancy** | Complete data isolation between colleges using MongoDB partitioning |
+| 🔍 **Global Search** | Search across the entire college network |
+| 📤 **Inter-Library Loans** | Request and approval workflow between institutions |
+| 🔐 **Secure Access** | Role-based access control |
+| 👥 **Role System** | Student, Librarian, and Admin roles |
+| 📊 **Analytics** | Track resource usage and demand |
 
 ---
 
-## 🏗 System Architecture
-
-LibrisConnect follows a **Multi-Tenant SaaS** architecture with a clear separation of concerns across four tiers.
+## 🏗 Architecture
 
 ```
-┌────────────────────────────────────────────────┐
-│              CLIENT TIER                       │
-│   Next.js 15 (SSR) + TanStack Query            │
-│   Tailwind CSS + Shadcn/UI                     │
-└─────────────────────┬──────────────────────────┘
-                      │ HTTPS
-┌─────────────────────▼──────────────────────────┐
-│              GATEWAY TIER                      │
-│   Azure Static Web Apps (Edge + SSL)           │
-└─────────────────────┬──────────────────────────┘
-                      │ JWT (tenant_id, role)
-┌─────────────────────▼──────────────────────────┐
-│           BUSINESS LOGIC TIER                  │
-│   Node.js / Express (Azure App Service)        │
-│   ├── Tenant Middleware (collegeId extraction) │
-│   ├── Sharing Engine (Trust Agreement checks)  │
-│   └── StorageService (SAS token generation)   │
-└──────┬──────────────┬───────────────┬──────────┘
-       │              │               │
-┌──────▼──────┐ ┌─────▼──────┐ ┌─────▼──────────┐
-│ Azure       │ │ Azure Blob │ │ Azure AI       │
-│ Cosmos DB   │ │ Storage    │ │ Search         │
-│ (Metadata)  │ │ (PDFs)     │ │ (Indexing)     │
-└─────────────┘ └────────────┘ └────────────────┘
+┌──────────────────────────┐
+│   Next.js Frontend       │
+│   (Client)               │
+└────────────┬─────────────┘
+             │ HTTP/HTTPS
+┌────────────▼─────────────┐
+│  Express.js API Server   │
+│  (Backend)               │
+└────────────┬─────────────┘
+             │
+┌────────────▼─────────────┐
+│   MongoDB Atlas          │
+│   (Database)             │
+└──────────────────────────┘
 ```
 
 ---
 
-## 🛠 Tech Stack
+## 🚀 Quick Start
 
-### Frontend
-| Layer | Technology | Purpose |
-|---|---|---|
-| Framework | Next.js 15 (React) | SSR for performance on low-bandwidth networks |
-| Styling | Tailwind CSS + Shadcn/UI | Rapid, accessible dashboard components |
-| State Management | TanStack Query | Search result caching and data fetching |
-| Language | TypeScript | Type safety across the 3-member team |
-| Auth (Client) | MSAL.js | Microsoft Entra ID redirect flow |
+### Prerequisites
+- Node.js 18+ and npm
+- MongoDB Atlas account (free tier available)
 
-### Backend
-| Layer | Technology | Purpose |
-|---|---|---|
-| Runtime | Node.js + Express.js | Async multi-tenant request handling |
-| Validation | Zod | Schema validation for incoming resource data |
-| Real-time | Socket.io / Azure SignalR | Live ILL request notifications |
-| Security | Helmet.js | HTTP header hardening |
-| ORM | Mongoose | MongoDB object modeling |
+### Step 1: Clone Repository
+```bash
+git clone https://github.com/yourusername/libris-connect.git
+cd libris-connect
+```
 
-### Cloud Infrastructure (Azure)
-| Service | Purpose |
-|---|---|
-| Azure Cosmos DB | Partitioned NoSQL catalog (MongoDB API) |
-| Azure Blob Storage | Encrypted PDF/EPUB storage with SAS tokens |
-| Azure AI Search | Semantic + fuzzy search across all resources |
-| Microsoft Entra ID | Institutional SSO and multi-tenant identity |
-| Azure App Service | Backend API hosting (Linux) |
-| Azure Static Web Apps | Frontend hosting + edge deployment |
-| Azure Cache for Redis | High-frequency search result caching |
-| Azure Application Insights | API monitoring and alerting |
-| GitHub Actions | CI/CD pipeline automation |
+### Step 2: Set Up MongoDB Atlas
+Follow the complete guide in [`MONGODB_INTEGRATION.md`](./MONGODB_INTEGRATION.md) or [`server/MONGODB_SETUP.md`](./server/MONGODB_SETUP.md)
+
+Quick summary:
+1. Create MongoDB Atlas account
+2. Create a free cluster
+3. Create database user
+4. Get connection string
+
+### Step 3: Configure Backend
+```bash
+cd server
+npm install
+
+# Create .env file with your MongoDB connection string
+echo "MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/libris-connect?retryWrites=true&w=majority" > .env
+echo "PORT=5000" >> .env
+echo "NODE_ENV=development" >> .env
+
+# Seed sample data
+node src/scripts/seed.js
+
+# Start backend server
+npm run dev
+```
+
+### Step 4: Configure Frontend
+```bash
+cd ../client
+npm install
+
+# Frontend is pre-configured to use http://localhost:5000/api
+# Optionally customize in .env.local if needed
+
+# Start frontend
+npm run dev
+```
+
+### Step 5: Access Application
+Open `http://localhost:3000` in your browser
 
 ---
 
-## 🗂 Project Structure
+## 📁 Project Structure
 
 ```
-librisconnect/
-├── apps/
-│   ├── web/                    # Next.js 15 frontend
-│   │   ├── app/                # App Router pages
-│   │   │   ├── dashboard/
-│   │   │   ├── search/
-│   │   │   └── admin/
-│   │   ├── components/         # Reusable UI components
-│   │   └── lib/                # TanStack Query hooks, utils
-│   └── api/                    # Node.js / Express backend
-│       ├── middleware/          # Tenant context extraction
-│       ├── modules/
-│       │   ├── auth/           # Entra ID + RBAC
-│       │   ├── resources/      # Book CRUD
-│       │   ├── requests/       # ILL state machine
-│       │   ├── search/         # Azure AI Search integration
-│       │   └── storage/        # Blob + SAS token service
-│       └── shared/
-│           └── types.ts        # Shared type definitions
-├── docs/
-│   ├── SRS.md
-│   ├── HLD.md
-│   └── API.md
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yml           # GitHub Actions pipeline
-└── docker-compose.yml
+libris-connect/
+├── client/                    # Next.js Frontend
+│   ├── app/                   # App directory with pages
+│   ├── components/            # React components
+│   ├── services/              # API client services
+│   ├── lib/                   # Utilities and helpers
+│   │   └── api-client.ts      # MongoDB API client
+│   ├── types/                 # TypeScript types
+│   └── package.json
+│
+├── server/                    # Express Backend
+│   ├── src/
+│   │   ├── index.js           # Express server
+│   │   ├── models/            # MongoDB schemas
+│   │   │   ├── Book.js
+│   │   │   ├── User.js
+│   │   │   └── College.js
+│   │   ├── routes/            # API endpoints
+│   │   │   ├── books.js
+│   │   │   └── auth.js
+│   │   └── scripts/
+│   │       └── seed.js        # Database seeding
+│   ├── MONGODB_SETUP.md       # Detailed setup guide
+│   └── package.json
+│
+├── MONGODB_INTEGRATION.md     # Complete integration guide
+└── README.md                  # This file
 ```
 
 ---
 
-## 🗃 Database Schema (Cosmos DB / MongoDB API)
+## 📚 API Documentation
 
-### `colleges` Collection
+### Books Endpoints
+
+#### GET `/api/books`
+Retrieve books with search and filters
+```bash
+GET /api/books?search=algorithms&category=CS&page=1&limit=20
+```
+
+Response:
 ```json
 {
-  "_id": "college_001",
-  "name": "IIT Madras",
-  "domain": "iitm.ac.in",
-  "settings": {
-    "allowExternalSharing": true,
-    "maxLoanDays": 14
+  "books": [
+    {
+      "_id": "507f1f77bcf86cd799439011",
+      "title": "Introduction to Algorithms",
+      "author": "Cormen",
+      "isbn": "978-0-262-03384-8",
+      "category": "Computer Science",
+      "college": { "_id": "...", "name": "IIT Madras" },
+      "availability": { "total": 15, "available": 8 },
+      "rating": 4.8,
+      "createdAt": "2024-01-15T10:30:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 42,
+    "page": 1,
+    "pages": 3
   }
 }
 ```
 
-### `resources` Collection *(Partition Key: `collegeId`)*
-```json
+#### GET `/api/books/:id`
+Get specific book details
+```bash
+GET /api/books/507f1f77bcf86cd799439011
+```
+
+#### POST `/api/books`
+Create new book (requires authentication)
+```bash
+POST /api/books
+Content-Type: application/json
+
 {
-  "_id": "book_abc123",
-  "collegeId": "college_001",
-  "title": "Introduction to Algorithms",
-  "metadata": { "isbn": "978-0262033848", "author": "Cormen" },
-  "sharing": {
-    "isPublic": false,
-    "sharedWith": ["college_002", "college_005"],
-    "digitalAccess": "snippet_only"
-  },
-  "status": "available"
+  "title": "Design Patterns",
+  "author": "Gang of Four",
+  "isbn": "0-201-63361-2",
+  "category": "Software Design",
+  "college": "507f1f77bcf86cd799439012",
+  "availability": { "total": 10, "available": 5 }
 }
 ```
 
----
-
-## 🔌 API Reference
-
-| Method | Endpoint | Description | Role |
-|---|---|---|---|
-| `GET` | `/api/v1/resources/search?q=...` | Global search across home + shared colleges | Student |
-| `POST` | `/api/v1/resources` | Add a new book to college inventory | Librarian |
-| `POST` | `/api/v1/requests/loan` | Request a physical/digital loan | Student |
-| `PATCH` | `/api/v1/requests/:id/approve` | Approve an incoming sharing request | Librarian |
-| `GET` | `/api/v1/analytics/sharing` | View sharing/borrowing statistics | Admin |
-
-> Full API documentation available in [/docs/API.md](./docs/API.md) and via Swagger at `/api/docs`.
-
----
-
-## 🔒 Security Model
-
-- **Tenant Isolation**: `collegeId` is always extracted from the server-side JWT — never trusted from query parameters.
-- **Digital Rights**: PDFs are served only via expiring Azure SAS tokens (24-hour window).
-- **RBAC**: Role (`Student` / `Librarian` / `SuperAdmin`) is enforced at the middleware level on every API request.
-- **Secrets Management**: All connection strings and keys are stored in Azure Key Vault — never hardcoded.
-- **Data Isolation**: Cross-tenant API calls return `403 Forbidden`. All `find()` queries are globally wrapped with a mandatory tenant filter.
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js `v20+`
-- Docker & Docker Compose
-- Azure CLI (for cloud provisioning)
-- A Microsoft Azure subscription
-
-### Local Development
-
+#### PUT `/api/books/:id`
+Update book details
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/librisconnect.git
-cd librisconnect
-
-# 2. Install dependencies
-npm install
-
-# 3. Configure environment variables
-cp .env.example .env.local
-# Fill in your Azure credentials and connection strings
-
-# 4. Start the development environment
-docker-compose up -d   # Starts local MongoDB + Redis
-npm run dev            # Starts Next.js + Express concurrently
+PUT /api/books/507f1f77bcf86cd799439011
 ```
 
-### Environment Variables
+#### DELETE `/api/books/:id`
+Delete book
+```bash
+DELETE /api/books/507f1f77bcf86cd799439011
+```
 
-```env
-# Azure Cosmos DB
-COSMOS_DB_CONNECTION_STRING=...
-COSMOS_DB_NAME=librisconnect
+### Authentication Endpoints
 
-# Microsoft Entra ID
-ENTRA_TENANT_ID=...
-ENTRA_CLIENT_ID=...
-ENTRA_CLIENT_SECRET=...
+#### POST `/api/auth/login`
+Login user
+```bash
+POST /api/auth/login
+Content-Type: application/json
 
-# Azure Blob Storage
-AZURE_BLOB_CONNECTION_STRING=...
-AZURE_BLOB_CONTAINER_NAME=resources
+{
+  "email": "student@college.edu",
+  "collegeId": "507f1f77bcf86cd799439012"
+}
+```
 
-# Azure AI Search
-AZURE_SEARCH_ENDPOINT=...
-AZURE_SEARCH_API_KEY=...
+Response:
+```json
+{
+  "user": {
+    "_id": "507f1f77bcf86cd799439013",
+    "email": "student@college.edu",
+    "name": "John Doe",
+    "role": "student",
+    "college": { "_id": "...", "name": "IIT Madras" }
+  },
+  "token": "JWT_TOKEN_..."
+}
+```
+
+#### GET `/api/auth/me`
+Get current user profile
+```bash
+GET /api/auth/me
+X-User-ID: 507f1f77bcf86cd799439013
 ```
 
 ---
 
-## 🏃 Sprint Roadmap
+## 🛠 Development
 
-| Sprint | Theme | Goal |
-|---|---|---|
-| **Sprint 1** | Foundation | Multi-tenant Auth + Azure Environment Setup |
-| **Sprint 2** | Core Inventory | Librarian Dashboard + Cosmos DB CRUD |
-| **Sprint 3** | Sharing Grid | Global Search + ILL Request/Approval Workflow |
-| **Sprint 4** | Hardening | QA, Security Audit, Performance, UI Polish |
+### Running Both Servers
 
----
-
-## 👥 Team & Roles
-
-| Member | Role | Primary Focus |
-|---|---|---|
-| **Jeevan** | Cloud Architect & Lead Backend | Azure infrastructure, Multi-tenant security, Sharing Engine |
-| **Ajay** | Product Engineer & UI/UX Lead | Next.js frontend, Search UI, Design System |
-| **Prithvi** | Integration & QA Lead | Middleware, Socket.io notifications, Jira, Testing |
-
-### Agile Ceremonies
-- **Sprint Duration**: 2 weeks
-- **Daily Stand-up**: 15-min sync (What did I do? What will I do? Blockers?)
-- **Sprint Review**: Demo to stakeholders at end of each sprint
-- **Sprint Retrospective**: Team process improvement discussion
-
----
-
-## 🧪 Testing Strategy
-
-```
-tests/
-├── unit/           # Jest — individual function tests (calculateFine, etc.)
-├── integration/    # API + DB communication tests
-├── security/       # Cross-tenant isolation & SAS token expiry tests
-└── e2e/            # Playwright — full user flow automation
+Terminal 1 - Backend:
+```bash
+cd server
+npm run dev
 ```
 
-**CI/CD**: All tests run automatically via GitHub Actions on every push. A failing test blocks deployment to the Azure staging environment.
+Terminal 2 - Frontend:
+```bash
+cd client
+npm run dev
+```
+
+### Available Scripts
+
+**Backend:**
+- `npm run dev` - Start with auto-reload
+- `npm start` - Start production server
+- `node src/scripts/seed.js` - Seed database with sample data
+
+**Frontend:**
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm start` - Start production server
+- `npm run lint` - Run ESLint
 
 ---
 
-## 🗺 Future Roadmap
+## 🗄️ Database Schema
 
-- **Phase 2** — AI-powered "Study Buddy" using Azure OpenAI to summarize academic chapters
-- **Phase 3** — Integration with the National Digital Library of India (NDLI) APIs
-- **Phase 4** — Offline-first Progressive Web App (PWA) for zero-internet regions
+### Collections
 
----
+**Books** - Academic resources
+- title, author, isbn, description, category
+- publisher, publishedYear, imageUrl, rating
+- availability (total, available)
+- college (reference), createdBy (reference)
 
-## 📄 Documentation
+**Users** - College members
+- email, name, role (student|librarian|admin)
+- college (reference), isActive, lastLogin
 
-| Document | Description |
-|---|---|
-| [SRS v1.0](./docs/SRS.md) | Software Requirements Specification |
-| [HLD](./docs/HLD.md) | High-Level System Architecture |
-| [System Design](./docs/system-design.md) | ERD, Sequence, Component Diagrams |
-| [API Docs](./docs/API.md) | REST endpoint reference (Swagger) |
-
----
-
-## 📜 License
-
-This project is developed as part of an academic initiative. All participating institutions are assumed to hold valid academic licenses for the digital resources they upload and share.
+**Colleges** - Participating institutions
+- name, code, state, city, tier (tier1|tier2|tier3)
+- email, libraryName, contactPerson, phone
 
 ---
 
-<p align="center">
-  Built with ❤️ to democratize academic resources across India.
-</p>
+## 🔒 Security
+
+- CORS enabled for local development
+- Data isolation at college level
+- User role-based access control
+- Secure API endpoints
+- MongoDB Atlas encryption at rest
+
+### Production Considerations
+- Enable HTTPS/SSL
+- Configure CORS for specific domains
+- Implement JWT authentication
+- Rate limiting
+- Environment variable management
+- Database backups
+
+---
+
+## 📦 Deployment
+
+### MongoDB Atlas
+- Already hosted cloud-side
+- Available at `mongo+srv://...` connection string
+- Automatic backups included
+
+### Backend Deployment
+Deploy `/server` to any Node.js hosting:
+- Vercel (serverless)
+- Railway
+- Render
+- AWS EC2/Lambda
+- DigitalOcean App Platform
+
+### Frontend Deployment
+Deploy `/client` to any static hosting:
+- Vercel (recommended for Next.js)
+- Netlify
+- AWS S3 + CloudFront
+- Any CDN provider
+
+---
+
+## 🚨 Troubleshooting
+
+### MongoDB Connection Issues
+- Verify connection string format
+- Check database username/password
+- Ensure IP whitelisted in Atlas Network Access
+- Confirm cluster is running (not paused)
+
+### API Not Responding
+- Check backend running on port 5000
+- Verify `MONGODB_URI` in `.env`
+- Check logs: `npm run dev`
+
+### Frontend Can't Connect
+- Verify backend is running
+- Check `NEXT_PUBLIC_API_URL` in `.env.local`
+- Look for CORS errors in browser console
+
+### Books Not Showing
+- Run seed script: `node server/src/scripts/seed.js`
+- Check MongoDB collections in Atlas console
+- Verify API endpoint: `curl http://localhost:5000/api/health`
+
+---
+
+## 📖 Documentation
+
+- [Complete MongoDB Integration Guide](./MONGODB_INTEGRATION.md)
+- [MongoDB Atlas Setup Instructions](./server/MONGODB_SETUP.md)
+- [API Contracts](./client/docs/API_CONTRACTS.md)
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see LICENSE file for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- MongoDB Atlas for database hosting
+- Next.js for the frontend framework
+- Express.js for the backend framework
+- India's educational institutions for inspiration
+
+---
+
+## 📞 Support
+
+For issues and questions:
+- Check existing GitHub issues
+- Create a new issue with reproduction steps
+- Email: support@libris-connect.com
+
+---
+
+**Last Updated:** April 2024  
+**Status:** Active Development  
+**Database:** MongoDB Atlas  
+**Backend:** Node.js + Express  
+**Frontend:** Next.js 16 + React 19
