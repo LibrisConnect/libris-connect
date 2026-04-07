@@ -13,7 +13,7 @@ const app = express();
 // Middleware
 app.use(compression());
 app.use(cors({
-  origin: "https://your-frontend-url.onrender.com",
+  origin: process.env.FRONTEND_URL,
   credentials: true
 }));
 app.use(express.json());
