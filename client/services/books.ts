@@ -3,7 +3,7 @@ import { getCollegeName, normalizeBook, normalizeBooks } from "@/lib/book-normal
 import { mockBooks } from "@/lib/mock-books"
 import type { AvailabilityStatus, Book } from "@/types/book"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://librisconnect-backend.onrender.com/api"
 
 const validAvailability = new Set<AvailabilityStatus | "all">([
   "available",
