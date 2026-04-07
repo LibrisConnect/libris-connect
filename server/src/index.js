@@ -12,7 +12,10 @@ const app = express();
 
 // Middleware
 app.use(compression());
-app.use(cors());
+app.use(cors({
+  origin: "https://your-frontend-url.onrender.com",
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

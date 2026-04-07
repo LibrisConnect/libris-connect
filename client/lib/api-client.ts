@@ -2,7 +2,7 @@
  * API Client Configuration
  * Replace with your backend server URL when deployed
  */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://librisconnect-backend.onrender.com/api';
 
 export class APIClient {
   private baseUrl: string;
