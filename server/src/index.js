@@ -49,11 +49,13 @@ app.get('/api/health', (req, res) => {
 import booksRouter from './routes/books.js';
 import authRouter from './routes/auth.js';
 import collegesRouter from './routes/colleges.js';
+import requestsRouter from './routes/requests.js';
 
 // Use routes
 app.use('/api/books', booksRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/colleges', collegesRouter);
+app.use('/api/requests', requestsRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

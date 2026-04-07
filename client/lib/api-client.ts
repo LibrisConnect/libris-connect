@@ -41,7 +41,19 @@ export class APIClient {
       });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.statusText}`);
+        const errorText = await response.text();
+        let errorMessage = response.statusText;
+
+        if (errorText) {
+          try {
+            const errorData = JSON.parse(errorText) as { error?: string; message?: string };
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            errorMessage = errorText;
+          }
+        }
+
+        throw new Error(`API error: ${errorMessage}`);
       }
 
       return await response.json();
@@ -93,14 +105,14 @@ export class APIClient {
   async login(email: string, password: string): Promise<any> {
     return this.request('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
     });
   }
 
   async register(email: string, name: string, collegeCode: string, reason?: string): Promise<any> {
     return this.request('/auth/register', {
       method: 'POST',
-      body: JSON.stringify({ email, name, collegeCode, reason }),
+      body: JSON.stringify({ email: email.trim().toLowerCase(), name, collegeCode, reason }),
     });
   }
 
@@ -112,10 +124,53 @@ export class APIClient {
     return this.request('/colleges');
   }
 
+  async getJoinRequests(status: 'pending' | 'approved' | 'rejected' = 'pending'): Promise<any> {
+    return this.request(`/auth/join-requests?status=${status}`);
+  }
+
+  async decideJoinRequest(
+    requestId: string,
+    decision: 'approved' | 'rejected',
+    adminNotes?: string
+  ): Promise<any> {
+    return this.request(`/auth/join-requests/${requestId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision, adminNotes }),
+    });
+  }
+
   async createCollege(data: any): Promise<any> {
     return this.request('/colleges', {
       method: 'POST',
       body: JSON.stringify(data),
+    });
+  }
+
+  async createBookRequest(bookId: string): Promise<any> {
+    return this.request('/requests', {
+      method: 'POST',
+      body: JSON.stringify({ bookId }),
+    });
+  }
+
+  async getMyBookRequests(): Promise<any> {
+    return this.request('/requests/me');
+  }
+
+  async getBookRequests(
+    status: 'pending_approval' | 'approved' | 'ready_for_pickup' | 'rejected' = 'pending_approval'
+  ): Promise<any> {
+    return this.request(`/requests?status=${status}`);
+  }
+
+  async decideBookRequest(
+    requestId: string,
+    decision: 'approved' | 'rejected',
+    notes?: string
+  ): Promise<any> {
+    return this.request(`/requests/${requestId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision, notes }),
     });
   }
 

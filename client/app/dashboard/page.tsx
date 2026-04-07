@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { BookOpen, LayoutDashboard, Search, Send, BookMarked, Clock, CheckCircle } from "lucide-react"
+import { BookOpen, LayoutDashboard, Search, Send, BookMarked, Clock, CheckCircle, XCircle } from "lucide-react"
 
 import { useActivityState } from "@/components/providers/activity-provider"
 import { useSessionState } from "@/components/providers/session-provider"
@@ -22,6 +22,7 @@ const requestStateLabel: Record<RequestState, string> = {
   pending_approval: "Pending Approval",
   approved: "Approved",
   ready_for_pickup: "Ready for Pickup",
+  rejected: "Rejected",
 }
 
 const getRequestStateIcon = (state: RequestState) => {
@@ -29,6 +30,7 @@ const getRequestStateIcon = (state: RequestState) => {
     case 'pending_approval': return <Clock className="h-4 w-4" />
     case 'approved': return <CheckCircle className="h-4 w-4" />
     case 'ready_for_pickup': return <BookMarked className="h-4 w-4" />
+    case 'rejected': return <XCircle className="h-4 w-4" />
   }
 }
 
@@ -37,6 +39,7 @@ const getRequestStateColor = (state: RequestState) => {
     case 'pending_approval': return 'from-orange-500/20 to-amber-500/20 text-orange-700 border-orange-200'
     case 'approved': return 'from-blue-500/20 to-cyan-500/20 text-blue-700 border-blue-200'
     case 'ready_for_pickup': return 'from-green-500/20 to-emerald-500/20 text-green-700 border-green-200'
+    case 'rejected': return 'from-red-500/20 to-rose-500/20 text-red-700 border-red-200'
   }
 }
 

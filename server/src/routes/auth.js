@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import JoinRequest from '../models/JoinRequest.js';
 import College from '../models/College.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -20,8 +21,10 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Find user by email
-    let user = await User.findOne({ email }).populate('college');
+    let user = await User.findOne({ email: normalizedEmail }).populate('college');
 
     if (!user) {
       return res.status(401).json({ error: 'Invalid email or password' });
@@ -77,8 +80,10 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ error: 'Email, name, and college code are required' });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({ error: 'Email already registered' });
     }
@@ -91,7 +96,7 @@ router.post('/register', async (req, res) => {
 
     // Check if join request already exists and is pending
     const existingRequest = await JoinRequest.findOne({
-      email,
+      email: normalizedEmail,
       college: college._id,
       status: 'pending',
     });
@@ -101,7 +106,7 @@ router.post('/register', async (req, res) => {
 
     // Create join request
     const joinRequest = new JoinRequest({
-      email,
+      email: normalizedEmail,
       name,
       college: college._id,
       reason,
@@ -115,6 +120,115 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     console.error('Register error:', error);
     res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+/**
+ * GET /auth/join-requests
+ * Get join requests for librarian/admin moderation
+ */
+router.get('/join-requests', authenticateToken, authorizeRoles('librarian', 'admin'), async (req, res) => {
+  try {
+    const status = req.query.status || 'pending';
+    const allowedStatuses = ['pending', 'approved', 'rejected'];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status filter' });
+    }
+
+    const query = { status };
+
+    // Librarians can only review requests for their own college.
+    if (req.user.role === 'librarian') {
+      query.college = req.user.college?._id;
+    }
+
+    const requests = await JoinRequest.find(query)
+      .populate('college', '_id name code city state')
+      .sort({ createdAt: -1 });
+
+    res.json({ requests });
+  } catch (error) {
+    console.error('Fetch join requests error:', error);
+    res.status(500).json({ error: 'Failed to fetch join requests' });
+  }
+});
+
+/**
+ * PATCH /auth/join-requests/:id
+ * Approve or reject a join request
+ */
+router.patch('/join-requests/:id', authenticateToken, authorizeRoles('librarian', 'admin'), async (req, res) => {
+  try {
+    const { decision, adminNotes } = req.body;
+
+    if (!['approved', 'rejected'].includes(decision)) {
+      return res.status(400).json({ error: 'Decision must be approved or rejected' });
+    }
+
+    const joinRequest = await JoinRequest.findById(req.params.id).populate('college');
+
+    if (!joinRequest) {
+      return res.status(404).json({ error: 'Join request not found' });
+    }
+
+    if (joinRequest.status !== 'pending') {
+      return res.status(400).json({ error: 'Join request has already been processed' });
+    }
+
+    // Librarians can only moderate requests for their own college.
+    if (
+      req.user.role === 'librarian' &&
+      String(joinRequest.college._id) !== String(req.user.college?._id)
+    ) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    joinRequest.status = decision;
+    joinRequest.adminNotes = adminNotes?.trim() || undefined;
+    joinRequest.approvedBy = req.user._id;
+    joinRequest.approvedAt = new Date();
+
+    let createdUser = null;
+
+    if (decision === 'approved') {
+      const existingUser = await User.findOne({ email: joinRequest.email });
+      if (existingUser) {
+        return res.status(400).json({ error: 'A user with this email already exists' });
+      }
+
+      const defaultPassword = process.env.JOIN_REQUEST_DEFAULT_PASSWORD || 'Password123';
+      const user = new User({
+        email: joinRequest.email,
+        name: joinRequest.name,
+        password: defaultPassword,
+        role: 'student',
+        college: joinRequest.college._id,
+        isActive: true,
+      });
+
+      await user.save();
+      createdUser = {
+        _id: user._id,
+        email: user.email,
+        role: user.role,
+        defaultPassword,
+      };
+    }
+
+    await joinRequest.save();
+
+    res.json({
+      message:
+        decision === 'approved'
+          ? 'Join request approved and student account created'
+          : 'Join request rejected',
+      request: joinRequest,
+      createdUser,
+    });
+  } catch (error) {
+    console.error('Moderate join request error:', error);
+    res.status(500).json({ error: 'Failed to process join request' });
   }
 });
 

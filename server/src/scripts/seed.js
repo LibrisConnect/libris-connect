@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import College from '../models/College.js';
 import Book from '../models/Book.js';
+import BookRequest from '../models/BookRequest.js';
 import User from '../models/User.js';
 
 dotenv.config();
@@ -14,6 +15,7 @@ const seedDatabase = async () => {
     // Clear existing data
     await College.deleteMany({});
     await Book.deleteMany({});
+    await BookRequest.deleteMany({});
     await User.deleteMany({});
     console.log('Cleared existing data');
 

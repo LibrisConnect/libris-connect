@@ -29,6 +29,7 @@ export function BookDetailsActions({ book }: BookDetailsActionsProps) {
   const { addRecentlyViewedBook, requestAccess } = useActivityState()
   const { session } = useSessionState()
   const [requestStatus, setRequestStatus] = useState<"idle" | RequestAccessResult>("idle")
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false)
   const [borrowHistory, setBorrowHistory] = useState(book.borrowHistory ?? [])
   const [conditionReviews, setConditionReviews] = useState(book.conditionReviews ?? [])
   const [borrowDays, setBorrowDays] = useState(book.borrowPolicy?.maxBorrowDays ?? 14)
@@ -130,17 +131,25 @@ export function BookDetailsActions({ book }: BookDetailsActionsProps) {
 
       <div className="flex flex-wrap gap-3">
         <Button
-          disabled={isRequestActionDisabled}
-          onClick={() => {
+          disabled={isRequestActionDisabled || isSubmittingRequest}
+          onClick={async () => {
             if (requiresLogin) {
               handleAuthRequired()
               return
             }
-            const result = requestAccess(book)
-            setRequestStatus(result)
+
+            setIsSubmittingRequest(true)
+            try {
+              const result = await requestAccess(book)
+              setRequestStatus(result)
+            } catch (error) {
+              console.error("Failed to create request:", error)
+            } finally {
+              setIsSubmittingRequest(false)
+            }
           }}
         >
-          Request Borrowing
+          {isSubmittingRequest ? "Requesting..." : "Request Borrowing"}
         </Button>
         <div className="flex items-center gap-2">
           <Input
@@ -164,7 +173,7 @@ export function BookDetailsActions({ book }: BookDetailsActionsProps) {
       </div>
       {requestStatus === "created" ? (
         <p className="text-xs text-muted-foreground">
-          Request added to Active Requests (mock state).
+          Request added to Active Requests.
         </p>
       ) : null}
       {requestStatus === "duplicate" ? (

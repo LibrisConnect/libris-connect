@@ -1,4 +1,4 @@
-export type RequestState = "pending_approval" | "approved" | "ready_for_pickup"
+export type RequestState = "pending_approval" | "approved" | "ready_for_pickup" | "rejected"
 
 export interface LibraryRequest {
   id: string

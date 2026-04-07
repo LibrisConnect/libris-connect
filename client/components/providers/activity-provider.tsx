@@ -4,15 +4,16 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react"
 
-import { getCollegeName } from "@/lib/book-normalization"
+import { apiClient } from "@/lib/api-client"
 import type { Book } from "@/types/book"
 import type { LibraryRequest } from "@/types/request"
+import { useSessionState } from "@/components/providers/session-provider"
 
 export type RequestAccessResult = "created" | "duplicate"
 
@@ -20,42 +21,61 @@ interface ActivityContextValue {
   recentlyViewedBooks: Book[]
   activeRequests: LibraryRequest[]
   addRecentlyViewedBook: (book: Book) => void
-  requestAccess: (book: Book) => RequestAccessResult
+  requestAccess: (book: Book) => Promise<RequestAccessResult>
 }
 
-const initialActiveRequests: LibraryRequest[] = [
-  {
-    id: "REQ-1024",
-    bookId: "book-8",
-    title: "Artificial Intelligence: A Modern Approach",
-    targetCollege: "IISc Bengaluru",
-    state: "pending_approval",
-    createdAt: "2026-03-31T08:30:00.000Z",
-  },
-  {
-    id: "REQ-1021",
-    bookId: "book-7",
-    title: "Designing Data-Intensive Applications",
-    targetCollege: "BITS Pilani",
-    state: "ready_for_pickup",
-    createdAt: "2026-03-30T12:00:00.000Z",
-  },
-]
+const normalizeRequest = (rawRequest: any): LibraryRequest => {
+  const book = rawRequest.book
+  const collegeName =
+    book?.college?.name || rawRequest.targetCollege || rawRequest.college?.name || "Unknown College"
+
+  return {
+    id: String(rawRequest._id || rawRequest.id),
+    bookId: String(book?._id || rawRequest.bookId || ""),
+    title: String(book?.title || rawRequest.title || "Untitled Book"),
+    targetCollege: String(collegeName),
+    state: rawRequest.status || rawRequest.state || "pending_approval",
+    createdAt: String(rawRequest.createdAt || new Date().toISOString()),
+  }
+}
 
 const ActivityContext = createContext<ActivityContextValue | undefined>(undefined)
 
 export function ActivityProvider({ children }: { children: ReactNode }) {
+  const { session, isSessionHydrated } = useSessionState()
   const [recentlyViewedBooks, setRecentlyViewedBooks] = useState<Book[]>([])
-  const [activeRequests, setActiveRequests] =
-    useState<LibraryRequest[]>(initialActiveRequests)
-  const requestCounter = useRef(1030)
+  const [activeRequests, setActiveRequests] = useState<LibraryRequest[]>([])
+
+  useEffect(() => {
+    const loadRequests = async () => {
+      if (!isSessionHydrated) {
+        return
+      }
+
+      if (!session.isAuthenticated || session.user?.role !== "student") {
+        setActiveRequests([])
+        return
+      }
+
+      try {
+        const response = await apiClient.getMyBookRequests()
+        const requests = Array.isArray(response.requests) ? response.requests.map(normalizeRequest) : []
+        setActiveRequests(requests)
+      } catch (error) {
+        console.error("Failed to load book requests:", error)
+        setActiveRequests([])
+      }
+    }
+
+    loadRequests()
+  }, [isSessionHydrated, session.isAuthenticated, session.user?.role])
 
   const addRecentlyViewedBook = useCallback((book: Book) => {
     setRecentlyViewedBooks((prev) => [book, ...prev.filter((item) => item.id !== book.id)].slice(0, 6))
   }, [])
 
   const requestAccess = useCallback(
-    (book: Book): RequestAccessResult => {
+    async (book: Book): Promise<RequestAccessResult> => {
       const hasPendingRequest = activeRequests.some(
         (request) => request.bookId === book.id && request.state === "pending_approval"
       )
@@ -64,20 +84,17 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
         return "duplicate"
       }
 
-      const nextId = `REQ-${String(requestCounter.current).padStart(4, "0")}`
-      requestCounter.current += 1
-
-      setActiveRequests((prev) => [
-        {
-          id: nextId,
-          bookId: book.id,
-          title: book.title,
-          targetCollege: getCollegeName(book.college),
-          state: "pending_approval",
-          createdAt: new Date().toISOString(),
-        },
-        ...prev,
-      ])
+      try {
+        const response = await apiClient.createBookRequest(book.id)
+        const createdRequest = normalizeRequest(response.request)
+        setActiveRequests((prev) => [createdRequest, ...prev])
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLowerCase() : ""
+        if (message.includes("already exists") || message.includes("pending request")) {
+          return "duplicate"
+        }
+        throw error
+      }
 
       return "created"
     },

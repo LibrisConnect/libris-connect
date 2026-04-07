@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { BookOpen, PlusCircle, Trash2 } from "lucide-react"
+import { BookOpen, CheckCircle2, PlusCircle, Trash2, XCircle } from "lucide-react"
 
 import { useAuthGuard } from "@/hooks/use-auth-guard"
 import { useSessionState } from "@/components/providers/session-provider"
@@ -18,6 +18,30 @@ type AdminBook = {
   college?: { _id?: string; name?: string }
 }
 
+type JoinRequest = {
+  _id: string
+  email: string
+  name: string
+  status: "pending" | "approved" | "rejected"
+  reason?: string
+  createdAt: string
+}
+
+type BookRequest = {
+  _id: string
+  status: "pending_approval" | "approved" | "ready_for_pickup" | "rejected"
+  createdAt: string
+  requester?: {
+    _id?: string
+    name?: string
+    email?: string
+  }
+  book?: {
+    _id?: string
+    title?: string
+  }
+}
+
 const initialForm = {
   title: "",
   author: "",
@@ -32,8 +56,12 @@ export default function CollegeAdminPage() {
   const isAllowed = useAuthGuard(["librarian"])
   const { session } = useSessionState()
   const [books, setBooks] = useState<AdminBook[]>([])
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([])
+  const [bookRequests, setBookRequests] = useState<BookRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [isProcessingRequestId, setIsProcessingRequestId] = useState<string | null>(null)
+  const [isProcessingBookRequestId, setIsProcessingBookRequestId] = useState<string | null>(null)
   const [form, setForm] = useState(initialForm)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -47,8 +75,15 @@ export default function CollegeAdminPage() {
   const loadBooks = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.getBooks(undefined, undefined, 1, 100)
-      setBooks(response.books ?? [])
+      const [booksResponse, requestsResponse, bookRequestsResponse] = await Promise.all([
+        apiClient.getBooks(undefined, undefined, 1, 100),
+        apiClient.getJoinRequests("pending"),
+        apiClient.getBookRequests("pending_approval"),
+      ])
+
+      setBooks(booksResponse.books ?? [])
+      setJoinRequests(requestsResponse.requests ?? [])
+      setBookRequests(bookRequestsResponse.requests ?? [])
     } finally {
       setLoading(false)
     }
@@ -100,6 +135,50 @@ export default function CollegeAdminPage() {
       await loadBooks()
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to delete book")
+    }
+  }
+
+  const handleRequestDecision = async (
+    requestId: string,
+    decision: "approved" | "rejected"
+  ) => {
+    setIsProcessingRequestId(requestId)
+    setMessage(null)
+
+    try {
+      const response = await apiClient.decideJoinRequest(requestId, decision)
+
+      if (response.createdUser?.email && response.createdUser?.defaultPassword) {
+        setMessage(
+          `Approved ${response.createdUser.email}. Temporary password: ${response.createdUser.defaultPassword}`
+        )
+      } else {
+        setMessage(response.message || "Request updated")
+      }
+
+      await loadBooks()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to process request")
+    } finally {
+      setIsProcessingRequestId(null)
+    }
+  }
+
+  const handleBookRequestDecision = async (
+    requestId: string,
+    decision: "approved" | "rejected"
+  ) => {
+    setIsProcessingBookRequestId(requestId)
+    setMessage(null)
+
+    try {
+      const response = await apiClient.decideBookRequest(requestId, decision)
+      setMessage(response.message || "Book request updated")
+      await loadBooks()
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to process book request")
+    } finally {
+      setIsProcessingBookRequestId(null)
     }
   }
 
@@ -176,6 +255,121 @@ export default function CollegeAdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg">Pending Join Requests ({joinRequests.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading requests...</p>
+          ) : joinRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No pending requests for your college.</p>
+          ) : (
+            <div className="space-y-3">
+              {joinRequests.map((request) => {
+                const isProcessing = isProcessingRequestId === request._id
+
+                return (
+                  <div key={request._id} className="rounded-lg border border-border/40 p-3 text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">{request.name}</p>
+                        <p className="text-xs text-muted-foreground">{request.email}</p>
+                        {request.reason ? (
+                          <p className="mt-2 text-xs text-muted-foreground">Reason: {request.reason}</p>
+                        ) : null}
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Requested {new Date(request.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleRequestDecision(request._id, "approved")}
+                          disabled={isProcessing}
+                          className="gap-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          {isProcessing ? "Processing..." : "Approve"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRequestDecision(request._id, "rejected")}
+                          disabled={isProcessing}
+                          className="gap-1"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50">
+        <CardHeader>
+          <CardTitle className="text-lg">Pending Book Requests ({bookRequests.length})</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Loading requests...</p>
+          ) : bookRequests.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No pending book requests for your college.</p>
+          ) : (
+            <div className="space-y-3">
+              {bookRequests.map((request) => {
+                const isProcessing = isProcessingBookRequestId === request._id
+
+                return (
+                  <div key={request._id} className="rounded-lg border border-border/40 p-3 text-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-foreground">{request.book?.title || "Unknown Book"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Requested by {request.requester?.name || "Unknown User"} ({request.requester?.email || "No Email"})
+                        </p>
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Requested {new Date(request.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleBookRequestDecision(request._id, "approved")}
+                          disabled={isProcessing}
+                          className="gap-1"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          {isProcessing ? "Processing..." : "Mark Ready"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleBookRequestDecision(request._id, "rejected")}
+                          disabled={isProcessing}
+                          className="gap-1"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {message ? (
         <p className="rounded-lg border border-border/40 bg-muted/30 px-4 py-3 text-sm text-muted-foreground">

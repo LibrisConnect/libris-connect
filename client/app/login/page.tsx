@@ -36,9 +36,11 @@ function LoginContent() {
     setFormError(null)
     setIsSubmitting(true)
 
+    const trimmedEmail = email.trim()
+
     try {
       // Validation
-      if (!email.trim()) {
+      if (!trimmedEmail) {
         setFormError("Email is required")
         setIsSubmitting(false)
         return
@@ -52,13 +54,13 @@ function LoginContent() {
 
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-      if (!emailRegex.test(email)) {
+      if (!emailRegex.test(trimmedEmail)) {
         setFormError("Please enter a valid email")
         setIsSubmitting(false)
         return
       }
 
-      const user = await login(email, password)
+      const user = await login(trimmedEmail, password)
       router.replace(safeRedirect ?? getRoleHomePath(user.role))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed"
