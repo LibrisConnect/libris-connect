@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
-    "build": "echo 'No build needed for Node.js'"
+    "build": "echo 'No build needed for Node.js'",
+    "test:auth": "node auth-matrix.test.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

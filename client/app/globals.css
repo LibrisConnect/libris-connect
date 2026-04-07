@@ -51,6 +51,7 @@
 :root {
   --background: oklch(0.98 0.001 263);
   --foreground: oklch(0.12 0 0);
+  --page-gradient: linear-gradient(135deg, oklch(0.98 0.001 263) 0%, oklch(0.96 0.005 280) 100%);
   --card: oklch(0.99 0.001 263);
   --card-foreground: oklch(0.12 0 0);
   --popover: oklch(0.99 0.001 263);
@@ -86,6 +87,7 @@
 .dark {
   --background: oklch(0.08 0 0);
   --foreground: oklch(0.95 0.01 260);
+  --page-gradient: linear-gradient(135deg, oklch(0.1 0.01 260) 0%, oklch(0.14 0.03 290) 100%);
   --card: oklch(0.12 0.01 260);
   --card-foreground: oklch(0.95 0.01 260);
   --popover: oklch(0.12 0.01 260);
@@ -123,10 +125,13 @@
   }
   body {
     @apply bg-background text-foreground;
-    background: linear-gradient(135deg, oklch(0.98 0.001 263) 0%, oklch(0.96 0.005 280) 100%);
+    min-height: 100vh;
+    background: var(--page-gradient);
   }
   html {
+    min-height: 100%;
     @apply font-sans;
+    background-color: var(--background);
   }
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;

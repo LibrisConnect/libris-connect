@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/api-client"
+import { getCollegeName, normalizeBooks } from "@/lib/book-normalization"
 import { getBooks } from "@/services/books"
 import type { Book, SearchFilters } from "@/types/book"
 import type {
@@ -19,12 +20,12 @@ export async function searchBooks(query: string, filters?: SearchFilters): Promi
       undefined
     )
 
-    let books = response.books || []
+    let books = normalizeBooks(response.books || [])
 
     // Apply additional filtering on client side if needed
     if (filters?.college) {
-      books = books.filter((book: any) => {
-        const collegeName = book.college?.name || book.college || ""
+      books = books.filter((book) => {
+        const collegeName = getCollegeName(book.college)
         return collegeName.toLowerCase().includes(filters.college!.toLowerCase())
       })
     }
@@ -41,7 +42,7 @@ export async function searchBooks(query: string, filters?: SearchFilters): Promi
     const books = await getBooks()
     const normalizedQuery = normalize(query)
 
-    return books.filter((book: any) => {
+    return books.filter((book) => {
       const matchesQuery =
         normalizedQuery.length === 0 ||
         normalize(book.title).includes(normalizedQuery) ||
@@ -49,7 +50,7 @@ export async function searchBooks(query: string, filters?: SearchFilters): Promi
         normalize(book.isbn).includes(normalizedQuery)
 
       const matchesCollege = !filters?.college || 
-        (book.college?.name || book.college || "").toLowerCase().includes(filters.college.toLowerCase())
+        getCollegeName(book.college).toLowerCase().includes(filters.college.toLowerCase())
 
       const matchesAvailability = !filters?.availability || filters.availability === 'all' || book.availability === filters.availability
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import Book from '../models/Book.js';
+import { authenticateToken, authorizeRoles } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -62,9 +63,18 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST create book
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, authorizeRoles('librarian'), async (req, res) => {
   try {
-    const book = new Book(req.body);
+    const payload = { ...req.body };
+
+    // Librarians can only create books under their own college.
+    if (req.user.role === 'librarian') {
+      payload.college = req.user.college?._id ?? req.user.college;
+    }
+
+    payload.createdBy = req.user._id;
+
+    const book = new Book(payload);
     await book.save();
     await book.populate('college', 'name');
 
@@ -75,9 +85,28 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update book
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, authorizeRoles('librarian'), async (req, res) => {
   try {
-    const book = await Book.findByIdAndUpdate(req.params.id, req.body, {
+    const existingBook = await Book.findById(req.params.id);
+
+    if (!existingBook) {
+      return res.status(404).json({ error: 'Book not found' });
+    }
+
+    // Librarians can only update books from their own college.
+    if (
+      req.user.role === 'librarian' &&
+      String(existingBook.college) !== String(req.user.college?._id ?? req.user.college)
+    ) {
+      return res.status(403).json({ error: 'You can only update books from your college' });
+    }
+
+    const payload = { ...req.body };
+    if (req.user.role === 'librarian') {
+      payload.college = existingBook.college;
+    }
+
+    const book = await Book.findByIdAndUpdate(req.params.id, payload, {
       new: true,
       runValidators: true,
     }).populate('college', 'name');
@@ -93,13 +122,23 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE book
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, authorizeRoles('librarian'), async (req, res) => {
   try {
-    const book = await Book.findByIdAndDelete(req.params.id);
+    const book = await Book.findById(req.params.id);
 
     if (!book) {
       return res.status(404).json({ error: 'Book not found' });
     }
+
+    // Librarians can only delete books from their own college.
+    if (
+      req.user.role === 'librarian' &&
+      String(book.college) !== String(req.user.college?._id ?? req.user.college)
+    ) {
+      return res.status(403).json({ error: 'You can only delete books from your college' });
+    }
+
+    await Book.findByIdAndDelete(req.params.id);
 
     res.json({ message: 'Book deleted successfully' });
   } catch (error) {

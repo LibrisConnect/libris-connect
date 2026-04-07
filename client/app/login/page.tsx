@@ -10,27 +10,26 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { apiClient } from "@/lib/api-client"
+import { getRoleHomePath } from "@/lib/auth-routes"
 
 function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { session, isLoading, error } = useSessionState()
+  const { session, login, isLoading, error } = useSessionState()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const redirectParam = searchParams.get("redirect")
-  const redirectTarget =
-    redirectParam && redirectParam.startsWith("/") ? redirectParam : "/dashboard"
+  const safeRedirect = redirectParam && redirectParam.startsWith("/") ? redirectParam : null
 
   // Redirect if already authenticated
   useEffect(() => {
     if (session.isAuthenticated && session.user) {
-      router.replace(redirectTarget)
+      router.replace(safeRedirect ?? getRoleHomePath(session.user.role))
     }
-  }, [session.isAuthenticated, redirectTarget, router, session.user])
+  }, [router, safeRedirect, session.isAuthenticated, session.user])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,23 +58,8 @@ function LoginContent() {
         return
       }
 
-      // Call login API
-      const response = await apiClient.login(email, password)
-
-      if (!response.user || !response.token) {
-        setFormError("Invalid response from server")
-        setIsSubmitting(false)
-        return
-      }
-
-      // Save to session provider through login function
-      // We'll use a direct approach here since the session provider handles it
-      localStorage.setItem('libris_auth_token', response.token)
-      localStorage.setItem('libris_auth_user', JSON.stringify(response.user))
-
-      // Update session state in context
-      // Redirect immediately
-      router.replace(redirectTarget)
+      const user = await login(email, password)
+      router.replace(safeRedirect ?? getRoleHomePath(user.role))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed"
       setFormError(errorMessage)

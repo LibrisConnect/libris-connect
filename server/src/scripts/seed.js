@@ -111,8 +111,81 @@ const seedDatabase = async () => {
 
     console.log(`Created ${colleges.length} colleges`);
 
+    const createIsoDate = (daysAgo) => {
+      const date = new Date();
+      date.setDate(date.getDate() - daysAgo);
+      return date.toISOString();
+    };
+
+    const buildBookMetadata = (index) => {
+      const maxBorrowDays = 10 + (index % 3) * 4;
+      const renewalLimit = index % 2 === 0 ? 1 : 2;
+      const dailyFineInr = 2 + (index % 4);
+      const recentStatus = index % 6 === 0 ? 'overdue' : index % 3 === 0 ? 'borrowed' : 'returned';
+
+      const recentBorrowEntry = {
+        borrowerName: 'Priya Sharma',
+        borrowerEmail: 'priya.sharma@iitm.student.ac.in',
+        borrowedAt: createIsoDate(24 + index),
+        dueAt:
+          recentStatus === 'returned'
+            ? createIsoDate(10 + index)
+            : recentStatus === 'overdue'
+              ? createIsoDate(2 + index)
+              : createIsoDate(-5),
+        status: recentStatus,
+        notes:
+          recentStatus === 'returned'
+            ? 'Book maintained in excellent condition.'
+            : recentStatus === 'overdue'
+              ? 'Due date passed. Reminder sent to borrower.'
+              : 'Currently on loan. Due in five days.',
+        ...(recentStatus === 'returned' && {
+          returnedAt: createIsoDate(11 + index),
+          conditionOnReturn: 'excellent',
+        }),
+      };
+
+      return {
+        borrowPolicy: {
+          maxBorrowDays,
+          renewalLimit,
+          dailyFineInr,
+        },
+        borrowHistory: [
+          {
+            borrowerName: 'Ravi Singh',
+            borrowerEmail: 'ravi.singh@bhu.student.ac.in',
+            borrowedAt: createIsoDate(50 + index),
+            dueAt: createIsoDate(36 + index),
+            returnedAt: createIsoDate(37 + index),
+            status: 'returned',
+            conditionOnReturn: index % 5 === 0 ? 'fair' : 'good',
+            notes: 'Returned on time with minor shelf wear.',
+          },
+          recentBorrowEntry,
+        ],
+        conditionReviews: [
+          {
+            reviewerName: 'Priya Sharma',
+            rating: 5,
+            condition: 'excellent',
+            review: 'Clean pages, firm binding, and no markings.',
+            createdAt: createIsoDate(11 + index),
+          },
+          {
+            reviewerName: 'Amit Verma',
+            rating: 4,
+            condition: index % 5 === 0 ? 'fair' : 'good',
+            review: 'Useful copy with slight wear near the spine.',
+            createdAt: createIsoDate(36 + index),
+          },
+        ],
+      };
+    };
+
     // Create books with ratings (rating reflects condition and availability)
-    const books = await Book.insertMany([
+    const baseBooks = [
       // Computer Science Books
       {
         title: 'Introduction to Algorithms',
@@ -520,7 +593,14 @@ const seedDatabase = async () => {
         availability: { total: 8, available: 5 },
         college: colleges[2]._id,
       },
-    ]);
+    ];
+
+    const books = await Book.insertMany(
+      baseBooks.map((book, index) => ({
+        ...book,
+        ...buildBookMetadata(index),
+      }))
+    );
 
     console.log(`Created ${books.length} books`);
 
@@ -881,12 +961,53 @@ const seedDatabase = async () => {
       users.push(user);
     }
 
+    // Link seeded books to each college librarian for role-based ownership behavior.
+    const librarians = users.filter((user) => user.role === 'librarian');
+    if (librarians.length > 0) {
+      const ownershipWrites = librarians.map((librarian) => ({
+        updateMany: {
+          filter: {
+            college: librarian.college,
+            createdBy: { $exists: false },
+          },
+          update: {
+            $set: { createdBy: librarian._id },
+          },
+        },
+      }));
+
+      const ownershipResult = await Book.bulkWrite(ownershipWrites);
+      console.log(`Linked seeded books to librarians: ${ownershipResult.modifiedCount ?? 0}`);
+    }
+
+    const collegeById = new Map(colleges.map((college) => [String(college._id), college.code]));
+    const usersWithCredentials = usersData
+      .map((user) => ({
+        role: user.role,
+        collegeCode: collegeById.get(String(user.college)) || 'NA',
+        email: user.email,
+        password: user.password,
+      }))
+      .sort((a, b) => {
+        const roleOrder = { admin: 0, librarian: 1, student: 2 };
+        if (roleOrder[a.role] !== roleOrder[b.role]) {
+          return roleOrder[a.role] - roleOrder[b.role];
+        }
+        if (a.collegeCode !== b.collegeCode) {
+          return a.collegeCode.localeCompare(b.collegeCode);
+        }
+        return a.email.localeCompare(b.email);
+      });
+
     console.log(`Created ${users.length} users`);
     console.log('✓ Database seeded successfully');
-    console.log('\nSample Logins:');
-    console.log('  Student: raj.kumar@iitm.student.ac.in / Password123');
-    console.log('  Librarian: librarian@iitm.ac.in / LibrarianPass123');
-    console.log('  Admin: admin@libris-connect.ac.in / AdminPass123');
+    console.log('\nAll Login Credentials (for UI testing):');
+    console.log('  Format: [ROLE] [COLLEGE] email / password');
+    for (const credential of usersWithCredentials) {
+      console.log(
+        `  [${credential.role.toUpperCase()}] [${credential.collegeCode}] ${credential.email} / ${credential.password}`
+      );
+    }
 
     await mongoose.connection.close();
   } catch (error) {
