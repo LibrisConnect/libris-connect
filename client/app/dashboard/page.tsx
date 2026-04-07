@@ -6,6 +6,7 @@ import { BookOpen, LayoutDashboard, Search, Send, BookMarked, Clock, CheckCircle
 import { useActivityState } from "@/components/providers/activity-provider"
 import { useSessionState } from "@/components/providers/session-provider"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getCollegeName } from "@/lib/book-normalization"
 import { useAuthGuard } from "@/hooks/use-auth-guard"
 import { availabilityLabel } from "@/lib/book-presentation"
 import type { RequestState } from "@/types/request"
@@ -40,7 +41,7 @@ const getRequestStateColor = (state: RequestState) => {
 }
 
 export default function DashboardPage() {
-  const isAuthenticated = useAuthGuard()
+  const isAuthenticated = useAuthGuard(["student"])
   const { activeRequests, recentlyViewedBooks } = useActivityState()
   const { session } = useSessionState()
 
@@ -174,7 +175,7 @@ export default function DashboardPage() {
                           <div>
                             <p className="text-xs text-muted-foreground mb-2">By {book.author}</p>
                             <div className="flex items-center gap-2 text-xs">
-                              <span className="px-2 py-1 rounded bg-muted text-muted-foreground">{book.college}</span>
+                              <span className="px-2 py-1 rounded bg-muted text-muted-foreground">{getCollegeName(book.college)}</span>
                               <span className="text-primary font-semibold">{availabilityLabel[book.availability]}</span>
                             </div>
                           </div>

@@ -1,13 +1,36 @@
 "use client"
 
 import Link from "next/link"
-import { BookOpen, LogOut } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { BookOpen, LogOut, Moon, Sun } from "lucide-react"
 
 import { useSessionState } from "@/components/providers/session-provider"
+import { useThemeState } from "@/components/providers/theme-provider"
 import { Button } from "@/components/ui/button"
+import { getRoleHomePath } from "@/lib/auth-routes"
 
 export function TopNavbar() {
+  const router = useRouter()
   const { session, logout } = useSessionState()
+  const { theme, isHydrated, toggleTheme } = useThemeState()
+
+  const roleQuickLinks =
+    session.isAuthenticated && session.user
+      ? session.user.role === "student"
+        ? [
+            { href: "/search", label: "Search" },
+            { href: "/dashboard", label: "Dashboard" },
+          ]
+        : session.user.role === "librarian"
+          ? [
+              { href: "/college-admin", label: "College Panel" },
+              { href: "/search", label: "Catalog" },
+            ]
+          : [
+              { href: "/admin", label: "Admin Panel" },
+              { href: "/search", label: "Catalog" },
+            ]
+      : [{ href: "/search", label: "Search" }]
 
   return (
     <header className="border-b border-border/40 bg-gradient-to-r from-background via-background to-background/80 backdrop-blur-sm sticky top-0 z-50 shadow-sm">
@@ -21,20 +44,39 @@ export function TopNavbar() {
           </span>
         </Link>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" asChild className="hover:bg-muted/60">
-            <Link href="/search">Search</Link>
+          {roleQuickLinks.map((link) => (
+            <Button key={link.href} variant="ghost" size="sm" asChild className="hover:bg-muted/60">
+              <Link href={link.href}>{link.label}</Link>
+            </Button>
+          ))}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleTheme}
+            className="hover:bg-muted/60"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
+          >
+            {isHydrated && theme === "dark" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
           </Button>
           {session.isAuthenticated && session.user ? (
             <>
               <Button variant="ghost" size="sm" asChild className="hover:bg-muted/60">
-                <Link href="/dashboard">
+                <Link href={getRoleHomePath(session.user.role)}>
                   {session.user.name}
                 </Link>
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={logout}
+                onClick={() => {
+                  logout()
+                  router.replace("/")
+                }}
                 className="hover:bg-destructive/10 hover:text-destructive gap-1"
               >
                 <LogOut className="h-4 w-4" />

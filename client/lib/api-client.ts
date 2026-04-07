@@ -111,6 +111,20 @@ export class APIClient {
   async getColleges(): Promise<any> {
     return this.request('/colleges');
   }
+
+  async createCollege(data: any): Promise<any> {
+    return this.request('/colleges', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateCollege(id: string, data: any): Promise<any> {
+    return this.request(`/colleges/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
 }
 
 export const apiClient = new APIClient();

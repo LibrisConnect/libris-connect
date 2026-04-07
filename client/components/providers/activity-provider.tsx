@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react"
 
+import { getCollegeName } from "@/lib/book-normalization"
 import type { Book } from "@/types/book"
 import type { LibraryRequest } from "@/types/request"
 
@@ -71,7 +72,7 @@ export function ActivityProvider({ children }: { children: ReactNode }) {
           id: nextId,
           bookId: book.id,
           title: book.title,
-          targetCollege: book.college,
+          targetCollege: getCollegeName(book.college),
           state: "pending_approval",
           createdAt: new Date().toISOString(),
         },

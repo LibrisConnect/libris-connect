@@ -14,6 +14,19 @@ import type { AuthUser, AuthError } from "@/types/auth"
 
 const AUTH_TOKEN_KEY = "libris_auth_token"
 const AUTH_USER_KEY = "libris_auth_user"
+const AUTH_COOKIE_KEY = "libris_demo_auth"
+
+const setAuthCookie = (isAuthenticated: boolean) => {
+  if (typeof document === "undefined") {
+    return
+  }
+
+  if (isAuthenticated) {
+    document.cookie = `${AUTH_COOKIE_KEY}=1; path=/; SameSite=Lax`
+  } else {
+    document.cookie = `${AUTH_COOKIE_KEY}=; path=/; max-age=0; SameSite=Lax`
+  }
+}
 
 interface SessionState {
   isAuthenticated: boolean
@@ -24,7 +37,7 @@ interface SessionState {
 interface SessionContextValue {
   session: SessionState
   isSessionHydrated: boolean
-  login: (email: string, collegeId: string) => Promise<void>
+  login: (email: string, password: string) => Promise<AuthUser>
   logout: () => void
   isLoading: boolean
   error: AuthError | null
@@ -57,22 +70,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           user,
           token: savedToken,
         })
+        setAuthCookie(true)
+      } else {
+        setAuthCookie(false)
       }
     } catch (err) {
       console.error("Failed to hydrate session:", err)
       localStorage.removeItem(AUTH_TOKEN_KEY)
       localStorage.removeItem(AUTH_USER_KEY)
+      setAuthCookie(false)
     }
 
     setIsSessionHydrated(true)
   }, [])
 
-  const login = useCallback(async (email: string, collegeId: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<AuthUser> => {
     setIsLoading(true)
     setError(null)
 
     try {
-      const response = await apiClient.login(email, collegeId)
+      const response = await apiClient.login(email, password)
 
       if (!response.user || !response.token) {
         throw new Error("Invalid response from server")
@@ -88,6 +105,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         user: response.user,
         token: response.token,
       })
+      setAuthCookie(true)
+      return response.user
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed"
       setError({ message: errorMessage })
@@ -106,6 +125,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       user: null,
       token: null,
     })
+    setAuthCookie(false)
     setError(null)
   }, [])
 

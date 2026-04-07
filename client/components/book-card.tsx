@@ -4,6 +4,7 @@ import Link from "next/link"
 import { ArrowRight, BookMarked, MapPin } from "lucide-react"
 
 import { useActivityState } from "@/components/providers/activity-provider"
+import { getCollegeName } from "@/lib/book-normalization"
 import type { Book } from "@/types/book"
 import { Card, CardContent, CardTitle } from "@/components/ui/card"
 import { availabilityBadgeStyles, availabilityLabel } from "@/lib/book-presentation"
@@ -60,7 +61,7 @@ export function BookCard({ book }: BookCardProps) {
             </span>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <MapPin className="h-3.5 w-3.5" />
-              <span className="truncate">{book.college}</span>
+              <span className="truncate">{getCollegeName(book.college)}</span>
             </div>
           </div>
 
